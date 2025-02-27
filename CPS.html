@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ochtend Dashboard</title>
+    <style>
+        @font-face {
+            font-family: 'Product Sans';
+            src: url('https://fonts.gstatic.com/s/productsans/v5/HYvgU2fE2nRJvZ5JFAumwegdm0LZdjqr5-oayXSOefg.woff2') format('woff2');
+            font-weight: 400;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Product Sans';
+            background-color: #E8F5E9;
+            color: #1B5E20;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-evenly;
+            height: 100vh;
+            text-align: center;
+            padding: 10px;
+        }
+
+        .time {
+            font-size: 2.8em;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        .date {
+            font-size: 1.4em;
+            margin-bottom: 15px;
+        }
+
+        .weather, .rss, .links {
+            width: 90%;
+            max-width: 1200px;
+        }
+
+        h2 {
+            font-size: 1.6em;
+            margin-bottom: 8px;
+        }
+
+        .weatherwidget-io {
+            display: block;
+            font-size: 1.2em;
+            color: #2E7D32;
+        }
+
+        .rss-feed {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .rss-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-width: 200px;
+        }
+
+        .rss-item img {
+            width: 140px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 10px;
+        }
+
+        .rss-item a {
+            color: #2E7D32;
+            text-decoration: none;
+            font-weight: bold;
+            margin-top: 5px;
+            font-size: 0.9em;
+        }
+
+        .rss-item a:hover {
+            text-decoration: underline;
+        }
+
+        .links {
+            display: flex;
+            justify-content: center;
+            gap: 35px;
+        }
+
+        .link-button {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            color: #1B5E20;
+            transition: transform 0.2s;
+        }
+
+        .link-button:hover {
+            transform: scale(1.1);
+        }
+
+        .link-button img {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px; /* Rounded edges for the SVGs */
+        }
+
+        .link-button span {
+            font-size: 1em;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="time">
+        <div id="current-time"></div>
+        <div class="date" id="current-date"></div>
+    </div>
+
+    <div class="weather">
+        <h2>Weer van deze week</h2>
+        <a class="weatherwidget-io" href="https://forecast7.com/nl/51d445d48/centrum/" data-label_1="Eindhoven" data-label_2="" data-font="Roboto" data-icons="Climacons Animated" data-mode="Forecast" data-theme="pure">Eindhoven Weer</a>
+    </div>
+
+    <div class="rss">
+        <h2>Updates</h2>
+        <div class="rss-feed" id="rss-content"></div>
+    </div>
+
+    <div class="links">
+        <a href="https://vanmaerlantlyceum.magister.net/magister/#/vandaag" class="link-button" target="_blank">
+            <img src="magister.svg" alt="Magister">
+            <span>Magister</span>
+        </a>
+        <a href="https://gemini.google.com" class="link-button" target="_blank">
+            <img src="gemini.svg" alt="Gemini">
+            <span>Gemini</span>
+        </a>
+        <a href="https://outlook.office365.com/mail/" class="link-button" target="_blank">
+            <img src="outlook.svg" alt="Outlook">
+            <span>Outlook</span>
+        </a>
+    </div>
+
+    <script>
+        (function(d,s,id){
+            let js, fjs = d.getElementsByTagName(s)[0];
+            if (!d.getElementById(id)) {
+                js = d.createElement(s);
+                js.id = id;
+                js.src = 'https://weatherwidget.io/js/widget.min.js';
+                fjs.parentNode.insertBefore(js, fjs);
+            }
+        }(document, 'script', 'weatherwidget-io-js'));
+
+        async function fetchRSS() {
+            const rssUrl = 'https://9to5google.com/feed/';
+            try {
+                const response = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`);
+                const data = await response.json();
+                const rssContent = document.getElementById('rss-content');
+                rssContent.innerHTML = '';
+
+                if (data.status === 'ok') {
+                    data.items.slice(0, 4).forEach(item => {
+                        let thumbnailUrl = item.enclosure?.link || '';
+                        if (!thumbnailUrl && item.description) {
+                            const imgMatch = item.description.match(/<img[^>]+src=["'](.*?)["']/i);
+                            thumbnailUrl = imgMatch ? imgMatch[1] : 'https://via.placeholder.com/80';
+                        }
+
+                        rssContent.innerHTML += `
+                            <div class="rss-item">
+                                <img src="${thumbnailUrl}" alt="${item.title}">
+                                <a href="${item.link}" target="_blank">${item.title}</a>
+                            </div>
+                        `;
+                    });
+                } else {
+                    rssContent.innerHTML = '<p>Kon 9to5Google feed niet laden.</p>';
+                }
+            } catch (error) {
+                console.error('Error fetching RSS feed:', error);
+            }
+        }
+
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('current-time').textContent = now.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('current-date').textContent = now.toLocaleDateString('nl-NL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        }
+
+        setInterval(updateTime, 60000);
+        updateTime();
+        fetchRSS();
+    </script>
+</body>
+</html>
